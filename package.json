@@ -1,0 +1,20 @@
+{
+  "name": "train-delay-bot",
+  "version": "1.0.0",
+  "description": "",
+  "main": "app.js",
+  "scripts": {
+    "make": "zip -r TrainDelayBot.zip index.js lib node_modules"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nibral/train-delay-bot.git"
+  },
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "aws-sdk": "^2.122.0",
+    "cheerio-httpcli": "^0.6.11",
+    "co": "^4.6.0"
+  }
+}
