@@ -32,6 +32,9 @@ const getColorOfStatus = status => {
     if (status.match(/運転見合わせ/)) {
         color = "danger";
     }
+    if (status.match(/解析失敗/)) {
+        color = "danger";
+    }
     return color;
 };
 
@@ -39,7 +42,7 @@ const getColorOfStatus = status => {
 exports.handler = (event, context, callback) => {
     co(function *() {
         const now = new Date();
-        console.log(`start:${now.toString()}`);
+        console.log(`INFO: operation started at ${now.toString()}`);
 
         // 新しい運行情報を取得する処理をworkerとして追加、全て完了するまで待ち合わせ
         const fetchWorkers = {};
@@ -55,9 +58,16 @@ exports.handler = (event, context, callback) => {
             const routeName = oldStatus.routeName;
             const newStatus = newStatusList[routeName];
 
-            console.log(routeName);
-            console.log(oldStatus);
-            console.log(newStatus);
+            console.log(`INFO: routeName: ${routeName}`);
+            console.log(`INFO: oldStatus: ${JSON.stringify(oldStatus)}`);
+            console.log(`INFO: newStatus: ${JSON.stringify(newStatus)}`);
+
+            // 正しく情報が取得できなかった時は専用メッセージをセット
+            if (newStatus.status === '' || newStatus.description === '') {
+                console.log('WARN: status or description is empty.');
+                newStatus.status = "解析失敗";
+                newStatus.description = "運行情報の解析に失敗しました。";
+            }
 
             // DB更新
             dynamodb.update(routeName, newStatus.status, newStatus.description);
@@ -69,21 +79,21 @@ exports.handler = (event, context, callback) => {
                     text: `${routeName}は、${newStatus.description}`,
                     color: getColorOfStatus(newStatus.status)
                 });
-                console.log(`description changed:${routeName},${oldStatus.description}->${newStatus.description}`);
+                console.log(`INFO: description changed: ${routeName} ${oldStatus.description} to ${newStatus.description}`);
             }
         });
 
         // メッセージがなければ終了
         if (updates.length === 0) {
-            console.log("nothing to change:");
-            callback(null, "nothing to change:");
+            console.log("INFO: nothing to change");
+            callback(null, "INFO: nothing to change");
             return;
         }
 
         // メッセージをSlackに送信
         const result = yield slack.post(SLACK_WEBHOOK_URL, updates);
-        console.log(`post success:${result}`);
-        callback(null, `post success:${result}`);
+        console.log(`INFO: post success: ${result}`);
+        callback(null, `INFO: post success: ${result}`);
     }).catch(error => {
         console.error(error);
         callback(error);
