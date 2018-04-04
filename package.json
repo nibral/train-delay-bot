@@ -13,8 +13,7 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "aws-sdk": "^2.122.0",
-    "cheerio-httpcli": "^0.6.11",
-    "co": "^4.6.0"
+    "aws-sdk": "^2.220.1",
+    "cheerio-httpcli": "^0.6.11"
   }
 }
