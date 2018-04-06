@@ -1,9 +1,8 @@
-"use strict";
+const dynamodb = require('./lib/dynamodb');
+const yahooTrain = require('./lib/yahoo_train');
+const slack = require('./lib/slack');
 
-const dynamodb = require("./lib/dynamodb");
-const yahooTrain = require("./lib/yahoo_train");
-const slack = require("./lib/slack");
-const SLACK_WEBHOOK_URL = process.env.SLACK_WEBHOOK_URL;
+const { SLACK_WEBHOOK_URL } = process.env;
 
 // entry point
 exports.handler = async (event, context, callback) => {
@@ -13,14 +12,13 @@ exports.handler = async (event, context, callback) => {
 
         // 路線ごとに運行情報の取得処理を生成し全て完了するまで待ち合わせ
         const oldStatusList = await dynamodb.scan();
-        const newStatusList = await Promise.all(oldStatusList.map(status => {
-            return yahooTrain.fetchAndParseTrainInfo(status.routeName, status.url);
-        }));
+        const newStatusList = await Promise.all(oldStatusList.map(status =>
+            yahooTrain.fetchAndParseTrainInfo(status.routeName, status.url)));
 
         // 運行情報の比較
-        let updates = [];
-        oldStatusList.forEach(oldStatus => {
-            const routeName = oldStatus.routeName;
+        const updates = [];
+        oldStatusList.forEach((oldStatus) => {
+            const { routeName } = oldStatus.routeName;
             const newStatus = newStatusList.find(status => status.routeName === routeName);
 
             console.log(`INFO: routeName: ${routeName}`);
@@ -30,8 +28,8 @@ exports.handler = async (event, context, callback) => {
             // 正しく情報が取得できなかった時は専用メッセージをセット
             if (newStatus.status === '' || newStatus.description === '') {
                 console.log('WARN: status or description is empty.');
-                newStatus.status = "解析失敗";
-                newStatus.description = "運行情報の解析に失敗しました。";
+                newStatus.status = '解析失敗';
+                newStatus.description = '運行情報の解析に失敗しました。';
             }
 
             // DB更新
@@ -42,7 +40,7 @@ exports.handler = async (event, context, callback) => {
                 updates.push({
                     title: `${oldStatus.icon} ${routeName} ${newStatus.status}`,
                     text: `${routeName}は、${newStatus.description}`,
-                    color: yahooTrain.getColorOfStatus(newStatus.status)
+                    color: yahooTrain.getColorOfStatus(newStatus.status),
                 });
                 console.log(`INFO: description changed: ${routeName} ${oldStatus.description} to ${newStatus.description}`);
             }
@@ -50,8 +48,8 @@ exports.handler = async (event, context, callback) => {
 
         // メッセージがなければ終了
         if (updates.length === 0) {
-            console.log("INFO: nothing to change");
-            callback(null, "INFO: nothing to change");
+            console.log('INFO: nothing to change');
+            callback(null, 'INFO: nothing to change');
             return;
         }
 
